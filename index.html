@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhận Diện Bệnh Cây</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #e0f7fa;
+        }
+
+        h1 {
+            color: #00796b;
+            margin-bottom: 10px;
+        }
+
+        #description {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #004d40;
+            text-align: center;
+            max-width: 600px;
+        }
+
+        #webcam-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 300px;
+            height: 300px;
+            border: 2px solid #004d40;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #highest-prediction {
+            margin-top: 20px;
+            font-size: 22px;
+            color: #004d40;
+            font-weight: bold;
+        }
+
+        button {
+            background-color: #00796b;
+            color: white;
+            padding: 12px 24px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        button:hover {
+            background-color: #004d40;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Nhận Diện Bệnh Cây</h1>
+    <div id="description">
+        Ứng dụng này giúp bạn nhận diện các bệnh thường gặp ở cây trồng bằng cách sử dụng mô hình học máy. Chỉ cần nhấn nút "Bắt Đầu" và hướng camera vào cây để nhận diện và nhận thông tin về tình trạng sức khỏe của cây.
+    </div>
+    <button type="button" onclick="init()">Bắt Đầu</button>
+    <div id="webcam-container"></div>
+    <div id="highest-prediction">Chưa có dự đoán</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        // URL của mô hình Teachable Machine
+        const URL = "https://teachablemachine.withgoogle.com/models/C18cnw_j1/";
+
+        let model, webcam, maxPredictions;
+
+        // Khởi tạo mô hình và webcam
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true; // Có lật webcam không
+            webcam = new tmImage.Webcam(300, 300, flip); // Kích thước và lật webcam
+            await webcam.setup(); // Yêu cầu quyền truy cập vào webcam
+            await webcam.play(); // Bắt đầu phát webcam
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+        }
+
+        // Vòng lặp cập nhật webcam và dự đoán
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        // Dự đoán lớp có tỷ lệ cao nhất và chỉ hiển thị lớp đó
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            let highestPrediction = { className: '', probability: 0 };
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction = prediction[i].className;
+                const probability = prediction[i].probability;
+
+                if (probability > highestPrediction.probability) {
+                    highestPrediction = { className: classPrediction, probability: probability };
+                }
+            }
+            
+            document.getElementById("highest-prediction").innerHTML = 
+                "Dự Đoán Bệnh: " + highestPrediction.className ;
+        }
+    </script>
+</body>
+</html>
